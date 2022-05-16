@@ -180,7 +180,7 @@ router.post('/verifyface',auth,async (req,res) => {
             image2: VerifyImageUrl,
         });
         const faceScore = faceVerify.output.distance ;
-        // console.log(parseInt(faceScore));
+        console.log(parseInt(faceScore));
         if(parseInt(faceScore)>=25){
             req.session.message = {
                 color: 'c23934',
@@ -189,7 +189,7 @@ router.post('/verifyface',auth,async (req,res) => {
             }
             req.session.isVerified = false;
             res.redirect('/verifyface');
-        }else if(parseInt(faceScore)<30){
+        }else if(parseInt(faceScore)<25){
             req.session.isVerified = true;
             res.redirect('/dashboard');
         }
