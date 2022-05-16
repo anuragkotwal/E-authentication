@@ -1,0 +1,26 @@
+section {
+    background-image: url("/svg/sectionBG.svg");
+  }
+  .card {
+    background-image: url("/svg/cardBG.svg");
+  }
+  i {
+    color: white;
+  }
+  .form-field {
+    margin: 14px;
+  }
+  .form-field input::placeholder {
+      color: rgb(114, 114, 114);
+  }
+  .form-field input[type=text], .form-field input[type=password], .form-field input[type=email] {
+        color: white;
+  }
+  .form-item button {
+    background-color: #000f1e;
+    text-transform: unset !important;
+  } 
+  .form-item button:hover {
+    background-color: #185EA5;
+    color: white;
+  }
