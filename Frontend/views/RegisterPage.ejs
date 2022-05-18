@@ -43,14 +43,14 @@
                   </p>
                   <form class="mx-1 mx-md-4" action="/register" method="POST">
                     <% if(message) { %>
-                      <script>
-                        M.toast(
-                          {
-                            html: "<strong style='color: #<%- message.color %>'><%- message.intro %>.</strong>&nbsp;<%- message.message %>",
-                          },
-                          3000
-                        );
-                      </script>
+                    <script>
+                      M.toast(
+                        {
+                          html: "<strong style='color: #<%- message.color %>'><%- message.intro %>.</strong>&nbsp;<%- message.message %>",
+                        },
+                        3000
+                      );
+                    </script>
                     <% } %>
                     <div class="d-flex flex-row align-items-center mb-4">
                       <i class="fa fa-user fa-lg me-3 fa-fw"></i>
@@ -62,6 +62,7 @@
                             name="fname"
                             class="form-control"
                             placeholder="First Name"
+                            pattern="[A-Za-z]+"
                             required
                           />
                         </div>
@@ -77,6 +78,7 @@
                             id="lname"
                             name="lname"
                             class="form-control"
+                            pattern="[A-Za-z]+" 
                             placeholder="Last Name"
                             required
                           />
@@ -115,6 +117,7 @@
                             name="password"
                             class="form-control"
                             placeholder="Password"
+                            required
                           />
                         </div>
                       </div>
@@ -127,6 +130,7 @@
                         <button
                           type="submit"
                           class="waves-effect waves-light btn"
+                          id="submit"
                         >
                           Next
                           <i class="material-icons right">send</i>

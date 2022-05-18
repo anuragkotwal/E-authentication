@@ -11,6 +11,7 @@ const connectDB=require('./DB/mongoose');
 const session = require('express-session');
 const deepai = require('deepai');
 const auth = require('./middleware/auth');
+const regex = /^[a-zA-Z]+$/;
 
 connectDB();
 
