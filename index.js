@@ -5,7 +5,7 @@ const router = express.Router();
 const cookieParser = require('cookie-parser');
 const User = require('./Models/Register');
 const otpGenerator = require('otp-generator');
-let otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
+let otp = function(){return otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true })};
 const sendOtp = require('./Email/Mailjet');
 const connectDB=require('./DB/mongoose');
 const session = require('express-session');
@@ -25,6 +25,8 @@ const client = new AWS.Rekognition({
 
 //? Connecting to DB
 connectDB();
+
+console.log(otp());
 
 router.use(express.static(__dirname + '/Frontend/public/')); 
 router.use(cookieParser());
@@ -107,7 +109,7 @@ router.post('/login', async (req,res) => {
             httpOnly: true,
             expires: new Date(Date.now()+240000),
         });
-        sendOtp(user.email,user.Firstname,user.Lastname,otp);
+        sendOtp(user.email,user.Firstname,user.Lastname,otp());
         req.session.isVerified = false;
         req.session.userId=user._id;
         res.redirect('/verify');
@@ -193,8 +195,8 @@ router.post('/verifyotp',auth,async (req,res) => {
 
 //?Resend OTP
 router.post('/resendotp',auth,(req, res) => {
-    otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
-    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp);
+    otp = function(){return otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true })};
+    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp());
     req.session.message = {
         color: '2e844a',
         intro: 'OTP Sended',
