@@ -9,7 +9,6 @@ let otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: fa
 const sendOtp = require('./Email/Mailjet');
 const connectDB=require('./DB/mongoose');
 const session = require('express-session');
-const deepai = require('deepai');
 const auth = require('./middleware/auth');
 const AWS = require('aws-sdk');
 const bucket = process.env.BUCKET;

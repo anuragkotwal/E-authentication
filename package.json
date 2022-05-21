@@ -17,7 +17,6 @@
     "buffer": "^6.0.3",
     "colors": "^1.4.0",
     "cookie-parser": "^1.4.6",
-    "deepai": "^1.0.21",
     "dotenv": "^16.0.0",
     "ejs": "^3.1.7",
     "express": "^4.17.3",
