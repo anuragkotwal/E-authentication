@@ -27,9 +27,6 @@ const UserSchema = new Schema({
                 throw new Error('Password cannot contain (password)!!');
         }
     },
-    imageURL:{
-        type:String,
-    },  
     tokens: [{
         token: {
             type: String,

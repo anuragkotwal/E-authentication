@@ -24,7 +24,7 @@ const client = new AWS.Rekognition({
     region: process.env.AWS_REGION,
 });
 
-
+//? Connecting to DB
 connectDB();
 
 router.use(express.static(__dirname + '/Frontend/public/')); 
@@ -47,8 +47,7 @@ router.get('/', (req, res) => {
     res.render('loginPage');
 })
 
-
-//?Get register page
+//?Get Register page
 router.get('/registerpage', (req, res) => {
     res.render('RegisterPage');
 })
@@ -80,7 +79,6 @@ router.post('/register',async (req,res) => {
             res.redirect('/faceregister')
         }
     }catch(err){
-        // console.log(err);
         if(err){
             if(err.keyPattern){
                 req.session.message = {
@@ -101,7 +99,7 @@ router.post('/register',async (req,res) => {
     }
 })
 
-//?Login router
+//?Login Verification
 router.post('/login', async (req,res) => {
     try{
         const user = await User.findByCredentials(req.body.email,req.body.password);
@@ -139,22 +137,12 @@ router.post('/logout', auth, async (req,res) => {
     }
 })
 
-router.post('/resendotp',auth,(req, res) => {
-    otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
-    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp);
-    req.session.message = {
-        color: '2e844a',
-        intro: 'OTP Sended',
-        message: '',
-    }
-    res.redirect('/verify');
-})
-
-//? FaceAuth
+//?Get FaceAuth
 router.get('/faceregister',auth, (req, res) => {
     res.render('FaceRecog');
 })
 
+//?Registering face to S3 Buckets
 router.post('/faceauth',auth,async (req,res) => {
     const imageUrl = req.body.imageUrl;
     const _id=req.session.userId;
@@ -183,10 +171,12 @@ router.post('/faceauth',auth,async (req,res) => {
     }catch(err){}
 })
 
+//?Get OTP verification page
 router.get('/verify',auth,async (req,res) =>{
     res.render('verification');
 });
 
+//? verifing OTP
 router.post('/verifyotp',auth,async (req,res) => {
     if(req.body.otp === otp){
         req.session.isVerified = false;
@@ -202,26 +192,37 @@ router.post('/verifyotp',auth,async (req,res) => {
     }
 })
 
+//?Resend OTP
+router.post('/resendotp',auth,(req, res) => {
+    otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
+    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp);
+    req.session.message = {
+        color: '2e844a',
+        intro: 'OTP Sended',
+        message: '',
+    }
+    res.redirect('/verify');
+})
+
+//? Get Face Verification Page
 router.get('/verifyface',auth,(req,res) => {
     res.render('faceVerify');
 })
 
+//? Verify face
 router.post('/verifyface',auth,async (req,res) => {
     const imageUrl = req.body.imageUrl;
     const BufImg = new Buffer.from(imageUrl.replace(/^data:image\/\w+;base64,/, ""), 'base64');
     const _id = req.user._id.toString();
-    let Targetimg;
     try{
         const _key = "verify-"+_id;
-        console.log(_key);
         const data = {
             Bucket: bucket,
             Key: _key,
             Body: BufImg,
             ContentEncoding: 'base64',
             ContentType: 'image/jpeg'
-        }
-        console.log(_id);      
+        }    
         S3.putObject(data, (err, data) => {
             if(err){
                 console.log("error occur to upload image");
@@ -277,6 +278,8 @@ router.post('/verifyface',auth,async (req,res) => {
     }
 })
 
+
+//? Get Dashboard
 router.get('/dashboard',auth,(req,res) => {
     if(req.session.isVerified==true){
         res.render('dashboard');
@@ -288,10 +291,6 @@ router.get('/dashboard',auth,(req,res) => {
         }
         res.redirect('/');
     }
-})
-
-router.get('/camera',(req,res) => {
-    res.render('Camera');
 })
 
 module.exports = router;
