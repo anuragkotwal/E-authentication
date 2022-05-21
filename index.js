@@ -247,7 +247,7 @@ router.post('/verifyface',auth,async (req,res) => {
             if (err) {
                     req.session.message = {
                         color: 'c23934',
-                        intro: 'Face not foundu.',
+                        intro: 'Face not found.',
                         message: 'Please try again.',
                     }
                     req.session.isVerified = false;
