@@ -11,7 +11,19 @@ const connectDB=require('./DB/mongoose');
 const session = require('express-session');
 const deepai = require('deepai');
 const auth = require('./middleware/auth');
-const regex = /^[a-zA-Z]+$/;
+const AWS = require('aws-sdk');
+const bucket = process.env.BUCKET;
+const S3 = new AWS.S3({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION
+});
+const client = new AWS.Rekognition({
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: process.env.AWS_REGION,
+});
+
 
 connectDB();
 
@@ -20,7 +32,7 @@ router.use(cookieParser());
 
 router.use(session({
     secret: 'admission',
-    cookie: {expires: 240000},
+    cookie: {expires: 480000},
     resave: false,
     saveUninitialized: false,
 }));
@@ -100,6 +112,7 @@ router.post('/login', async (req,res) => {
         });
         sendOtp(user.email,user.Firstname,user.Lastname,otp);
         req.session.isVerified = false;
+        req.session.userId=user._id;
         res.redirect('/verify');
     }catch(err){
         console.log(err.message);
@@ -126,6 +139,17 @@ router.post('/logout', auth, async (req,res) => {
     }
 })
 
+router.post('/resendotp',auth,(req, res) => {
+    otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true });
+    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp);
+    req.session.message = {
+        color: '2e844a',
+        intro: 'OTP Sended',
+        message: '',
+    }
+    res.redirect('/verify');
+})
+
 //? FaceAuth
 router.get('/faceregister',auth, (req, res) => {
     res.render('FaceRecog');
@@ -134,17 +158,28 @@ router.get('/faceregister',auth, (req, res) => {
 router.post('/faceauth',auth,async (req,res) => {
     const imageUrl = req.body.imageUrl;
     const _id=req.session.userId;
+    const BufImg = new Buffer.from(imageUrl.replace(/^data:image\/\w+;base64,/, ""), 'base64');
     try{
-        const CurrUser = await User.findById(_id);
-        CurrUser.imageURL = imageUrl;
-        await CurrUser.save();
-        req.session.message = {
-            color: '2e844a',
-            isRegistered: true,
-            intro: 'Registered Successfully.',
-            message: 'Redirecting to login page',
-        }
-        res.redirect('/faceregister');
+        const data = {
+            Bucket: bucket,
+            Key: _id,
+            Body: BufImg,
+            ContentEncoding: 'base64',
+            ContentType: 'image/jpeg'
+        }       
+        S3.putObject(data, (err, data) => {
+            if(err){
+                console.log(err);
+            }else{
+                req.session.message = {
+                    color: '2e844a',
+                    isRegistered: true,
+                    intro: 'Registered Successfully.',
+                    message: 'Redirecting to login page',
+                }
+                res.redirect('/faceregister');
+            }
+        });
     }catch(err){}
 })
 
@@ -173,27 +208,70 @@ router.get('/verifyface',auth,(req,res) => {
 
 router.post('/verifyface',auth,async (req,res) => {
     const imageUrl = req.body.imageUrl;
-    const VerifyImageUrl = req.user.imageURL;
-    deepai.setApiKey(process.env.DEEP_AI);
+    const BufImg = new Buffer.from(imageUrl.replace(/^data:image\/\w+;base64,/, ""), 'base64');
+    const _id = req.user._id.toString();
+    let Targetimg;
     try{
-        const faceVerify = await deepai.callStandardApi("image-similarity", {
-            image1: imageUrl,
-            image2: VerifyImageUrl,
-        });
-        const faceScore = faceVerify.output.distance ;
-        console.log(parseInt(faceScore));
-        if(parseInt(faceScore)>=25){
-            req.session.message = {
-                color: 'c23934',
-                intro: 'Face not verified.',
-                message: 'Please try again.',
-            }
-            req.session.isVerified = false;
-            res.redirect('/verifyface');
-        }else if(parseInt(faceScore)<25){
-            req.session.isVerified = true;
-            res.redirect('/dashboard');
+        const _key = "verify-"+_id;
+        console.log(_key);
+        const data = {
+            Bucket: bucket,
+            Key: _key,
+            Body: BufImg,
+            ContentEncoding: 'base64',
+            ContentType: 'image/jpeg'
         }
+        console.log(_id);      
+        S3.putObject(data, (err, data) => {
+            if(err){
+                console.log("error occur to upload image");
+            }else{
+                console.log("saved to bucket");
+            }
+        });
+        const params = {
+                SourceImage: {
+                    S3Object: {
+                        Bucket: bucket,
+                        Name: _id,
+                    },
+                },
+                TargetImage: {
+                    S3Object: {
+                        Bucket: bucket,
+                        Name: _key,
+                    },
+                },
+            }
+        client.compareFaces(params, function(err, response) {
+            if (err) {
+                    req.session.message = {
+                        color: 'c23934',
+                        intro: 'Face not foundu.',
+                        message: 'Please try again.',
+                    }
+                    req.session.isVerified = false;
+                    res.redirect('/verifyface');    
+            } else {
+                if(response.FaceMatches.length === 0){
+                    req.session.message = {
+                        color: 'c23934',
+                        intro: 'Face not verified.',
+                        message: 'Please try again.',
+                    }
+                    req.session.isVerified = false;
+                    res.redirect('/verifyface');      
+                }else{
+                    response.FaceMatches.forEach(data => {
+                        const similarity = data.Similarity;
+                        if(similarity>90){
+                            req.session.isVerified = true;
+                            res.redirect('/dashboard');
+                        }
+                    })
+                } 
+            } 
+        });
     }catch(err){
         console.log(err);
     }
@@ -210,6 +288,10 @@ router.get('/dashboard',auth,(req,res) => {
         }
         res.redirect('/');
     }
+})
+
+router.get('/camera',(req,res) => {
+    res.render('Camera');
 })
 
 module.exports = router;
