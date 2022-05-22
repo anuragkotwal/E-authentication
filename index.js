@@ -245,35 +245,44 @@ router.post('/verifyface',auth,async (req,res) => {
                     },
                 },
             }
-        client.compareFaces(params, function(err, response) {
-            if (err) {
-                    req.session.message = {
-                        color: 'c23934',
-                        intro: 'Face not found.',
-                        message: 'Please try again.',
-                    }
-                    req.session.isVerified = false;
-                    res.redirect('/verifyface');    
-            } else {
-                if(response.FaceMatches.length === 0){
-                    req.session.message = {
-                        color: 'c23934',
-                        intro: 'Face not verified.',
-                        message: 'Please try again.',
-                    }
-                    req.session.isVerified = false;
-                    res.redirect('/verifyface');      
-                }else{
-                    response.FaceMatches.forEach(data => {
-                        const similarity = data.Similarity;
-                        if(similarity>90){
-                            req.session.isVerified = true;
-                            res.redirect('/dashboard');
+        setTimeout(() => {
+            client.compareFaces(params, function(err, response) {
+                if (err) {
+                        req.session.message = {
+                            color: 'c23934',
+                            intro: 'Face not found.',
+                            message: 'Please try again.',
                         }
-                    })
+                        req.session.isVerified = false;
+                        res.redirect('/verifyface');    
+                } else {
+                    if(response.FaceMatches.length === 0){
+                        req.session.message = {
+                            color: 'c23934',
+                            intro: 'Face not verified.',
+                            message: 'Please try again.',
+                        }
+                        req.session.isVerified = false;
+                        res.redirect('/verifyface');      
+                    }else{
+                        response.FaceMatches.forEach(data => {
+                            const similarity = data.Similarity;
+                            if(similarity>90){
+                                const params = {  Bucket: bucket, Key: _key };
+                                S3.deleteObject(params, function(err, data) {
+                                    if (err) 
+                                        console.log(err, err.stack); 
+                                    else{
+                                        req.session.isVerified = true;
+                                        res.redirect('/dashboard');
+                                    }             
+                                });
+                            }
+                        })
+                    } 
                 } 
-            } 
-        });
+            });
+        }, 1000);
     }catch(err){
         console.log(err);
     }
