@@ -5,13 +5,14 @@ const router = express.Router();
 const cookieParser = require('cookie-parser');
 const User = require('./Models/Register');
 const otpGenerator = require('otp-generator');
-let otp = function(){return otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true })};
+const otp = function(){return otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true })};
 const sendOtp = require('./Email/Mailjet');
 const connectDB=require('./DB/mongoose');
 const session = require('express-session');
 const auth = require('./middleware/auth');
 const AWS = require('aws-sdk');
 const bucket = process.env.BUCKET;
+let OTPgen;
 const S3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -24,9 +25,7 @@ const client = new AWS.Rekognition({
 });
 
 //? Connecting to DB
-connectDB();
-
-console.log(otp());
+connectDB();    
 
 router.use(express.static(__dirname + '/Frontend/public/')); 
 router.use(cookieParser());
@@ -109,7 +108,8 @@ router.post('/login', async (req,res) => {
             httpOnly: true,
             expires: new Date(Date.now()+240000),
         });
-        sendOtp(user.email,user.Firstname,user.Lastname,otp());
+        OTPgen = otp()
+        sendOtp(user.email,user.Firstname,user.Lastname,OTPgen);
         req.session.isVerified = false;
         req.session.userId=user._id;
         res.redirect('/verify');
@@ -179,7 +179,7 @@ router.get('/verify',auth,async (req,res) =>{
 
 //? verifing OTP
 router.post('/verifyotp',auth,async (req,res) => {
-    if(req.body.otp === otp){
+    if(req.body.otp === OTPgen){
         req.session.isVerified = false;
         res.redirect('/verifyface');
     }
@@ -195,8 +195,8 @@ router.post('/verifyotp',auth,async (req,res) => {
 
 //?Resend OTP
 router.post('/resendotp',auth,(req, res) => {
-    otp = function(){return otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false, lowerCaseAlphabets: false, digits: true })};
-    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,otp());
+    OTPgen = otp();
+    sendOtp(req.user.email,req.user.Firstname,req.user.Lastname,OTPgen);
     req.session.message = {
         color: '2e844a',
         intro: 'OTP Sended',
