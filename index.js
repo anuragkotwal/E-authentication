@@ -11,6 +11,7 @@ const connectDB=require('./DB/mongoose');
 const session = require('express-session');
 const auth = require('./middleware/auth');
 const AWS = require('aws-sdk');
+const { response } = require('express');
 const bucket = process.env.BUCKET;
 let OTPgen;
 const S3 = new AWS.S3({
@@ -23,6 +24,7 @@ const client = new AWS.Rekognition({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     region: process.env.AWS_REGION,
 });
+
 
 //? Connecting to DB
 connectDB();    
@@ -160,15 +162,49 @@ router.post('/faceauth',auth,async (req,res) => {
             if(err){
                 console.log(err);
             }else{
-                req.session.message = {
-                    color: '2e844a',
-                    isRegistered: true,
-                    intro: 'Registered Successfully.',
-                    message: 'Redirecting to login page',
-                }
-                res.redirect('/faceregister');
+                console.log("saved photo to s3 bucket");
             }
         });
+        const params={
+            Image: {
+                S3Object: {
+                  Bucket: bucket,
+                  Name: _id
+                },
+              },
+              Attributes: ['ALL']
+        }
+        setTimeout(() => {
+            client.detectFaces(params, function(err, data) {
+                if(err){
+                    console.log(err);
+                }
+                else if(data.FaceDetails.length>0){
+                        req.session.message = {
+                            color: '2e844a',
+                            isRegistered: true,
+                            intro: 'Registered Successfully.',
+                            message: 'Redirecting to login page',
+                        }
+                        res.redirect('/faceregister');
+                }else{
+                    const paramsForS3 = {  Bucket: bucket, Key: _id };
+                    S3.deleteObject(paramsForS3, function(err, data) {
+                        if (err) 
+                            console.log(err, err.stack); 
+                        else{
+                            req.session.message = {
+                                color: 'c23934',
+                                isRegistered: false,
+                                intro: 'Face not found.',
+                                message: 'Please try again.',
+                            }
+                            res.redirect('/faceregister');
+                        }             
+                    });
+                }
+            })
+        }, 500);
     }catch(err){}
 })
 
@@ -231,58 +267,82 @@ router.post('/verifyface',auth,async (req,res) => {
                 console.log("saved to bucket");
             }
         });
-        const params = {
-                SourceImage: {
-                    S3Object: {
-                        Bucket: bucket,
-                        Name: _id,
-                    },
+        const paramsForDetectFace={
+            Image: {
+                S3Object: {
+                  Bucket: bucket,
+                  Name: _key
                 },
-                TargetImage: {
-                    S3Object: {
-                        Bucket: bucket,
-                        Name: _key,
-                    },
-                },
-            }
+              },
+              Attributes: ['ALL']
+        }
         setTimeout(() => {
-            client.compareFaces(params, function(err, response) {
-                if (err) {
-                        req.session.message = {
-                            color: 'c23934',
-                            intro: 'Face not found.',
-                            message: 'Please try again.',
-                        }
-                        req.session.isVerified = false;
-                        res.redirect('/verifyface');    
-                } else {
-                    if(response.FaceMatches.length === 0){
-                        req.session.message = {
-                            color: 'c23934',
-                            intro: 'Face not verified.',
-                            message: 'Please try again.',
-                        }
-                        req.session.isVerified = false;
-                        res.redirect('/verifyface');      
-                    }else{
-                        response.FaceMatches.forEach(data => {
-                            const similarity = data.Similarity;
-                            if(similarity>90){
-                                const params = {  Bucket: bucket, Key: _key };
-                                S3.deleteObject(params, function(err, data) {
-                                    if (err) 
-                                        console.log(err, err.stack); 
-                                    else{
-                                        req.session.isVerified = true;
-                                        res.redirect('/dashboard');
-                                    }             
-                                });
+            client.detectFaces(paramsForDetectFace, function(err, data) {
+                if(err){
+                    console.log("hello from face detect")
+                    console.log(err);
+                }
+                else if(data.FaceDetails.length>0){
+                    const params = {
+                        SourceImage: {
+                            S3Object: {
+                                Bucket: bucket,
+                                Name: _id,
+                            },
+                        },
+                        TargetImage: {
+                            S3Object: {
+                                Bucket: bucket,
+                                Name: _key,
+                            },
+                        },
+                    }
+                    client.compareFaces(params, function(err, response) {
+                        if (err) {
+                            console.log("hello from compare face");
+                            console.log(err);
+                        } else if(response.FaceMatches.length === 0){
+                            req.session.message = {
+                                color: 'c23934',
+                                intro: 'Face not verified.',
+                                message: 'Please try again.',
                             }
-                        })
-                    } 
-                } 
-            });
-        }, 1000);
+                            req.session.isVerified = false;
+                            res.redirect('/verifyface');      
+                        }else{
+                            response.FaceMatches.forEach(data => {
+                                const similarity = data.Similarity;
+                                if(similarity>90){
+                                    const params = {  Bucket: bucket, Key: _key };
+                                    S3.deleteObject(params, function(err, data) {
+                                        if (err) 
+                                            console.log(err, err.stack); 
+                                        else{
+                                            req.session.isVerified = true;
+                                            res.redirect('/dashboard');
+                                        }             
+                                    });
+                                }
+                            })
+                        } 
+                    });
+                }else{
+                    const paramsForS3 = {  Bucket: bucket, Key: _key };
+                    S3.deleteObject(paramsForS3, function(err, data) {
+                        if (err) 
+                            console.log(err, err.stack); 
+                        else{
+                            req.session.message = {
+                                color: 'c23934',
+                                intro: 'Face not found.',
+                                message: 'Please try again.',
+                            }
+                            res.redirect('/verifyface');
+                        }             
+                    });
+                }
+            })
+        }, 500);
     }catch(err){
         console.log(err);
     }

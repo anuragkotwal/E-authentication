@@ -35,26 +35,12 @@
                   </p>
                   <% if(message) { %>
                   <script>
-                    const isRegistered = "<%- message.isRegistered %>";
-                    console.log(isRegistered);
-                    if (isRegistered == "true") {
-                      M.toast(
-                        {
-                          html: "<strong><%- message.intro %></strong><br /><%- message.message %>",
-                          completeCallback: function () {
-                            window.location.href = "/";
-                          }
-                        },
-                        3000
-                      );
-                    } else {
                       M.toast(
                         {
                           html: "<strong style='color: #<%- message.color %>'><%- message.intro %></strong>&nbsp;<%- message.message %>",
                         },
                         3000
                       );
-                    }
                   </script>
                   <% } %>
                   <div class="d-flex justify-content-center">

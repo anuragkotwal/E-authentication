@@ -27,3 +27,6 @@ section {
   .fa{
     font-size:24px;
   }
+  small{
+    color: white
+  }
