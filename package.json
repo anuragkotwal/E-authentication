@@ -11,10 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@sendgrid/mail": "^7.6.2",
     "aws-sdk": "^2.1138.0",
     "bcryptjs": "^2.4.3",
-    "buffer": "^6.0.3",
     "colors": "^1.4.0",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.0.0",
@@ -24,8 +22,7 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.2.7",
     "node-mailjet": "^3.3.7",
-    "otp-generator": "^4.0.0",
-    "webcam-easy": "^1.0.5"
+    "otp-generator": "^4.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"
