@@ -179,15 +179,30 @@ router.post('/faceauth',auth,async (req,res) => {
                 if(err){
                     console.log(err);
                 }
-                else if(data.FaceDetails.length>0){
-                        req.session.message = {
-                            color: '2e844a',
-                            isRegistered: true,
-                            intro: 'Registered Successfully.',
-                            message: 'Redirecting to login page',
-                        }
-                        res.redirect('/faceregister');
-                }else{
+                else if(data.FaceDetails.length === 1){
+                    req.session.message = {
+                        color: '2e844a',
+                        isRegistered: true,
+                        intro: 'Registered Successfully.',
+                        message: 'Redirecting to login page',
+                    }
+                    res.redirect('/faceregister');
+                }else if(data.FaceDetails.length>1){
+                    const paramsForS3 = {  Bucket: bucket, Key: _id };
+                    S3.deleteObject(paramsForS3, function(err, data) {
+                        if (err) 
+                            console.log(err, err.stack); 
+                        else{
+                            req.session.message = {
+                                color: 'c23934',
+                                isRegistered: false,
+                                intro: 'Too many faces.',
+                                message: 'Please try again.',
+                            }
+                            res.redirect('/faceregister');
+                        }             
+                    });
+                }else {
                     const paramsForS3 = {  Bucket: bucket, Key: _id };
                     S3.deleteObject(paramsForS3, function(err, data) {
                         if (err) 
@@ -282,7 +297,7 @@ router.post('/verifyface',auth,async (req,res) => {
                     console.log("hello from face detect")
                     console.log(err);
                 }
-                else if(data.FaceDetails.length>0){
+                else if(data.FaceDetails.length === 1){
                     const params = {
                         SourceImage: {
                             S3Object: {
@@ -325,6 +340,20 @@ router.post('/verifyface',auth,async (req,res) => {
                                 }
                             })
                         } 
+                    });
+                }else if(data.FaceDetails.length>1){
+                    const paramsForS3 = {  Bucket: bucket, Key: _key };
+                    S3.deleteObject(paramsForS3, function(err, data) {
+                        if (err) 
+                            console.log(err, err.stack); 
+                        else{
+                            req.session.message = {
+                                color: 'c23934',
+                                intro: 'Too many faces.',
+                                message: 'Please try again.',
+                            }
+                            res.redirect('/verifyface');
+                        }             
                     });
                 }else{
                     const paramsForS3 = {  Bucket: bucket, Key: _key };
