@@ -45,6 +45,7 @@ router.use((req, res, next) => {
 
 //?Get login page
 router.get('/', (req, res) => {
+    res.clearCookie("jwt");
     res.render('loginPage');
 })
 
@@ -113,9 +114,9 @@ router.post('/login', async (req,res) => {
         sendOtp(user.email,user.Firstname,user.Lastname,OTPgen);
         req.session.isVerified = false;
         req.session.userId=user._id;
+        console.log(req.session.isVerified);
         res.redirect('/verify');
     }catch(err){
-        console.log(err.message);
         req.session.message = {
             color: 'c23934',
             intro: err.message,
@@ -293,7 +294,6 @@ router.post('/verifyface',auth,async (req,res) => {
         setTimeout(() => {
             client.detectFaces(paramsForDetectFace, function(err, data) {
                 if(err){
-                    console.log("hello from face detect")
                     console.log(err);
                 }
                 else if(data.FaceDetails.length === 1){
@@ -351,6 +351,7 @@ router.post('/verifyface',auth,async (req,res) => {
                                 intro: 'Too many faces.',
                                 message: 'Please try again.',
                             }
+                            req.session.isVerified = false;
                             res.redirect('/verifyface');
                         }             
                     });
@@ -365,6 +366,7 @@ router.post('/verifyface',auth,async (req,res) => {
                                 intro: 'Face not found.',
                                 message: 'Please try again.',
                             }
+                            req.session.isVerified = false;
                             res.redirect('/verifyface');
                         }             
                     });
@@ -379,19 +381,12 @@ router.post('/verifyface',auth,async (req,res) => {
 
 //? Get Dashboard
 router.get('/dashboard',auth,(req,res) => {
-    if(req.session.isVerified==true){
+    if(req.session.isVerified === true){
         res.render('dashboard');
-    }else{
-        req.session.message = {
-            color: 'c23934',
-            intro: 'You are not verified.',
-            message: 'Please try to login',
-        }
-        res.redirect('/');
     }
 });
 
-//Page Not Found
+//? Page Not Found
 router.get('*',(req,res) => {
     res.render('Error404')
 });

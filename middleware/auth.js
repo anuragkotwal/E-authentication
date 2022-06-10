@@ -12,7 +12,12 @@ const auth = async (req,res,next) =>{
         req.user = user;
         next();
     }catch(err){
-        res.render('loginPage');
+        req.session.message = {
+            color: 'c23934',
+            intro: 'You are not verified.',
+            message: 'Please try to login.',
+        }
+        res.redirect('/');
     }
 }
 
