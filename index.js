@@ -11,7 +11,6 @@ const connectDB=require('./DB/mongoose');
 const session = require('express-session');
 const auth = require('./middleware/auth');
 const AWS = require('aws-sdk');
-const { response } = require('express');
 const bucket = process.env.BUCKET;
 let OTPgen;
 const S3 = new AWS.S3({
@@ -390,6 +389,12 @@ router.get('/dashboard',auth,(req,res) => {
         }
         res.redirect('/');
     }
-})
+});
+
+//Page Not Found
+router.get('*',(req,res) => {
+    res.render('Error404')
+});
+
 
 module.exports = router;
