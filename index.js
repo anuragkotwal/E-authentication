@@ -51,6 +51,7 @@ router.get('/', (req, res) => {
 
 //?Get Register page
 router.get('/registerpage', (req, res) => {
+    res.clearCookie("jwt");
     res.render('RegisterPage');
 })
 
@@ -114,7 +115,6 @@ router.post('/login', async (req,res) => {
         sendOtp(user.email,user.Firstname,user.Lastname,OTPgen);
         req.session.isVerified = false;
         req.session.userId=user._id;
-        console.log(req.session.isVerified);
         res.redirect('/verify');
     }catch(err){
         req.session.message = {
